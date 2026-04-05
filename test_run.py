@@ -1,28 +1,33 @@
+"""Smoke test: random policy on FortisL7Env (Gymnasium API)."""
+
+from __future__ import annotations
+
+import numpy as np
+
 from env import FortisL7Env
-import random
 
-# Initialize the environment on Hard Mode (Level 3)
-env = FortisL7Env(difficulty_level=3)
 
-# Reset the environment to get the first state
-initial_state = env.reset()
-print("🔥 FORTIS L7 SIMULATION START 🔥")
-print(f"Initial State: {initial_state}\n")
+def main() -> None:
+    env = FortisL7Env(difficulty_level=2, max_episode_steps=50, seed=42)
+    obs, info = env.reset(seed=42)
+    print("Fortis-L7 smoke test")
+    print("obs shape:", obs.shape, "dtype:", obs.dtype)
+    print("reset info keys:", sorted(info.keys()))
 
-# Run 5 random actions to see how the engine responds
-for step in range(1, 6):
-    # Agent picks a random action (0: Allow, 1: Block, 2: Captcha, 3: Inspect)
-    action = random.choice([0, 1, 2, 3])
-    
-    # Step the environment forward
-    next_obs, reward, done, info = env.step(action)
-    
-    print(f"--- Step {step} ---")
-    print(f"Agent Action: {action}")
-    print(f"Ground Truth (Was Bot?): {info['ground_truth_was_bot']}")
-    print(f"Reward Received: {reward}")
-    print(f"Current Server CPU: {info['current_cpu']:.2f}")
-    
-    if done:
-        print("\n💥 SERVER CRASHED OR MAX STEPS REACHED 💥")
-        break
+    for step in range(1, 6):
+        action = int(env.action_space.sample())
+        obs, reward, terminated, truncated, info = env.step(action)
+        print(f"\n--- step {step} ---")
+        print("action:", action, "reward:", reward, "terminated:", terminated)
+        print("classification (hidden):", info.get("classification"))
+        print("risk_score (hidden):", round(info["risk_score"], 4))
+        print("traffic_tier:", info.get("traffic_tier"))
+        print("TP/FP/FN:", info.get("true_positive"), info.get("false_positive"), info.get("false_negative"))
+        if terminated or truncated:
+            break
+
+    print("\nstate() snapshot:", env.state())
+
+
+if __name__ == "__main__":
+    main()
