@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.git/
+.gitignore
+.cursor/
+agent-transcripts/
+assets/
+terminals/
+tb_fortis/
+*.zip
+*.log

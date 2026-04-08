@@ -74,7 +74,7 @@ def main() -> None:
     def factory(rank: int) -> FortisL7Env:
         return make_env(args.difficulty, rank)
 
-    vec = make_vec_env(factory, n_envs=args.n_envs, vec_env_cls=DummyVecEnv)
+    vec = make_vec_env(factory, n_envs=args.n_envs)
     vec = VecMonitor(vec)
 
     model = PPO(
