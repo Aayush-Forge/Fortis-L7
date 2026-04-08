@@ -80,14 +80,25 @@ def _to_bool_text(value: bool) -> str:
     return "true" if value else "false"
 
 
-def _heuristic_action(risk_score: float) -> int:
-    if risk_score > 0.75:
+def heuristic_policy(obs) -> int:
+    ip_rep, velocity, entropy, nav, jitter = obs
+
+    risk = (
+        0.30 * ip_rep
+        + 0.25 * velocity
+        + 0.20 * entropy
+        + 0.15 * (1 - nav)
+        + 0.10 * jitter
+    )
+
+    if risk > 0.75:
         return 3
-    if risk_score > 0.55:
+    elif risk > 0.55:
         return 2
-    if risk_score > 0.35:
+    elif risk > 0.35:
         return 1
-    return 0
+    else:
+        return 0
 
 
 def _select_action(
@@ -98,8 +109,14 @@ def _select_action(
 ) -> int:
     # Use LLM only in uncertainty zone for stability and lower latency.
     if 0.35 < risk_score < 0.65:
-        return _llm_action(client, model_name, obs)
-    return _heuristic_action(risk_score)
+        try:
+            return _llm_action(client, model_name, obs)
+        except Exception as e:
+            print(f"[LLM FALLBACK] API error encountered, using heuristic. Error: {e}")
+            return heuristic_policy(obs)
+            
+    # Outside uncertainty zone, or if we skip LLM
+    return heuristic_policy(obs)
 
 
 def _run_task(task, grader_fn, client: OpenAI, model_name: str) -> float:
@@ -158,8 +175,8 @@ def _run_task(task, grader_fn, client: OpenAI, model_name: str) -> float:
 
 def main() -> None:
     # Required env vars for OpenEnv runtime
-    api_base_url = os.getenv("API_BASE_URL")
-    model_name = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    api_base_url = os.getenv("API_BASE_URL","https://router.huggingface.co/v1")
+    model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
     hf_token = os.getenv("HF_TOKEN")
 
     # Required initialization pattern from the submission prompt.
