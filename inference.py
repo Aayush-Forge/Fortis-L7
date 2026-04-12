@@ -107,16 +107,19 @@ def _select_action(
     client: OpenAI,
     model_name: str,
 ) -> int:
-    # Use LLM only in uncertainty zone for stability and lower latency.
     if 0.35 < risk_score < 0.65:
         try:
             return _llm_action(client, model_name, obs)
         except Exception as e:
             print(f"[LLM FALLBACK] API error encountered, using heuristic. Error: {e}")
             return heuristic_policy(obs)
-            
-    # Outside uncertainty zone, or if we skip LLM
+
     return heuristic_policy(obs)
+
+
+def _safe_score(value: float) -> float:
+    """Ensure score is strictly within (0, 1) — never 0.0 or 1.0."""
+    return max(0.001, min(0.999, float(value)))
 
 
 def _run_task(task, grader_fn, client: OpenAI, model_name: str) -> float:
@@ -164,22 +167,20 @@ def _run_task(task, grader_fn, client: OpenAI, model_name: str) -> float:
         if error_msg != "null":
             break
 
-    score = float(grader_fn(logs))
+    score = _safe_score(grader_fn(logs))
     rewards_csv = ",".join(f"{r:.2f}" for r in rewards)
     print(
         "[END] "
-        f"success={_to_bool_text(success)} steps={step_count} score={max(0.0, min(score, 1.0)):.2f} rewards={rewards_csv}"
+        f"success={_to_bool_text(success)} steps={step_count} score={score:.4f} rewards={rewards_csv}"
     )
     return score
 
 
 def main() -> None:
-    # Required env vars for OpenEnv runtime
-    api_base_url = os.getenv("API_BASE_URL","https://router.huggingface.co/v1")
+    api_base_url = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
     model_name = os.getenv("MODEL_NAME", "meta-llama/Llama-3.1-8B-Instruct")
     hf_token = os.getenv("HF_TOKEN")
 
-    # Required initialization pattern from the submission prompt.
     client = OpenAI(base_url=os.getenv("API_BASE_URL"), api_key=hf_token)
 
     if not api_base_url:

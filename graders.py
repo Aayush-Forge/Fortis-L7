@@ -18,6 +18,7 @@ def _sum_metric(logs: Iterable[Dict[str, Any]], key: str, alt: str | None = None
 
 
 def _clamp01(value: float) -> float:
+    """Strict open interval (0, 1) — never returns 0.0 or 1.0."""
     return max(0.001, min(0.999, float(value)))
 
 
