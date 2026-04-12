@@ -18,7 +18,7 @@ def _sum_metric(logs: Iterable[Dict[str, Any]], key: str, alt: str | None = None
 
 
 def _clamp01(value: float) -> float:
-    return max(0.0, min(1.0, float(value)))
+    return max(0.001, min(0.999, float(value)))
 
 
 def grade_static_scraper(logs) -> float:
@@ -26,7 +26,7 @@ def grade_static_scraper(logs) -> float:
     tn = _sum_metric(logs, "TN", "true_negative")
     total = len(logs)
     if total <= 0:
-        return 0.0
+        return 0.001
     accuracy = (tp + tn) / total
     return _clamp01(accuracy / 0.9)
 
@@ -39,7 +39,7 @@ def grade_distributed_attack(logs) -> float:
         if cls in ("verified_human", "probably_human"):
             human_requests += 1
     if human_requests <= 0:
-        return 0.0
+        return 0.001
     false_positive_rate = fp / human_requests
     return _clamp01(1.0 - (false_positive_rate / 0.05))
 
@@ -51,7 +51,7 @@ def grade_llm_mimicry(logs) -> float:
         cls = row.get("classification")
         if cls in ("soft_bot", "hard_bot"):
             malicious_requests += 1
-    bot_detection_rate = (tp / malicious_requests) if malicious_requests > 0 else 0.0
+    bot_detection_rate = (tp / malicious_requests) if malicious_requests > 0 else 0.001
 
     cpu_peak = 0.0
     for row in logs:
